@@ -41,8 +41,3 @@ A small team project for developing a restaurant order management program.
 - Fighting, Action, and RTS games
 - Music
 - Drawing and Design
-
-## References
-**Poravee wongsawadsuriya**
-Professor of Computer Science, Kasetsart University
-Email: poravee.w@ku.th
