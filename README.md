@@ -34,6 +34,6 @@ Faculty of Liberal Arts and Science
 ## Interests
 - Cybersecurity
 - Software Development
-- Fighting and RTS games
+- Fighting and RPG games
 - Music
 - Drawing and Design
