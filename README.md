@@ -26,7 +26,7 @@ Faculty of Liberal Arts and Science
 - Problem solving
 
 ## Project
-[Transformation](Transformation.html)
+- [Transformation](Transformation.html)
 
 ## Language
 **English:** B2 (Upper-Intermediate)
