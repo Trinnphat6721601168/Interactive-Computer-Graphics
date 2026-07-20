@@ -27,10 +27,6 @@ Faculty of Liberal Arts and Science
 
 ## Project
 [Transformation](Transformation.html)
-### Restaurant Order Management System
-A small team project for developing a restaurant order management program.
-- Designed and implemented features for managing customer orders.
-- Collaborated with teammates during development and testing.
 
 ## Language
 **English:** B2 (Upper-Intermediate)
