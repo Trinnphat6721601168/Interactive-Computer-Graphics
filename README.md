@@ -26,7 +26,7 @@ Faculty of Liberal Arts and Science
 - Problem solving
 
 ## Project
-[Tranfomation](Tranformation.html)
+[Tranfomation](Transformation.html)
 ### Restaurant Order Management System
 A small team project for developing a restaurant order management program.
 - Designed and implemented features for managing customer orders.
