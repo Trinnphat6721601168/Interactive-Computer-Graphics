@@ -27,6 +27,7 @@ Faculty of Liberal Arts and Science
 
 ## Project
 - [Transformation](Transformation.html)
+- [Paint](Paint.html)
 
 ## Language
 **English:** B2 (Upper-Intermediate)
