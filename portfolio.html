@@ -1,135 +1,337 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <title>Materials with Light Controls</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
-    </style>
+    <title>Portfolio</title>
+    <style>body { margin: 0; overflow: hidden; }</style>
 </head>
-
 <body>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/EXRLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.18"></script>
 
     <script>
+        // Setup Renderer, Scene & Base Configs
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true; // Shadow
+        renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
+        const defaultCamPos = new THREE.Vector3(0, 10, 20), defaultTargetPos = new THREE.Vector3(0, 0, 0);
 
-        const camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-        );
-        camera.position.set(0, 2, 5);
-        camera.lookAt(0, 0, 0);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.copy(defaultCamPos);
 
-   
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;   
-        controls.dampingFactor = 0.05;  
-        controls.rotateSpeed = 0.8;      
-
-        const abmientLight = new THREE.AmbientLight(0x404040, 0.5);
-        scene.add(abmientLight);
-
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(10, 10, 10);
-        directionalLight.castShadow = true;
-        
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
-        directionalLight.shadow.camera.near = 0.5;
-        directionalLight.shadow.camera.far = 50;
-        
-        scene.add(directionalLight);
-
-        const lightHelper = new THREE.DirectionalLightHelper(directionalLight, 2);
-        scene.add(lightHelper);
-
-        // --- โหลด Skybox EXR ---
-        const exrSkyboxUrl = 'https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//sky.exr';
-        const pmremGenerator = new THREE.PMREMGenerator(renderer);
-        pmremGenerator.compileEquirectangularShader();
-
-        new THREE.EXRLoader()
-            .setDataType(THREE.UnsignedByteType)
-            .load(exrSkyboxUrl, (texture) => {
-                const skybox = pmremGenerator.fromEquirectangular(texture).texture;
-                scene.background = skybox;
-                scene.environment = skybox;
-
-                texture.dispose();
-                pmremGenerator.dispose();
-            }, undefined, (error) => {
-                console.error('Unable to load EXR skybox:', error);
-            });
-
-        const loader = new THREE.GLTFLoader();
-        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//portfolio0-02.glb', (gltf) => {
-            const model = gltf.scene;
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                }
-            });
-            model.position.set(0, 0, 0);
-            scene.add(model);
+        Object.assign(controls, { 
+            enableDamping: true, 
+            dampingFactor: 0.05, 
+            rotateSpeed: 0.8,
+            maxPolarAngle: Math.PI / 2 - 0.05 
         });
+        controls.target.copy(defaultTargetPos);
 
-        const gui = new lil.GUI({ title: 'Custom light' });
+        // Smooth Camera Controls
+        let targetCamPos = defaultCamPos.clone(), targetLookAt = defaultTargetPos.clone(), isTransitioning = false;
+        controls.addEventListener('start', () => isTransitioning = false);
 
-        const sunFolder = gui.addFolder('Position of Sun Light');
-        sunFolder.add(directionalLight.position, 'x', -50, 50, 0.1).name('X:').onChange(() => lightHelper.update());
-        sunFolder.add(directionalLight.position, 'y', 0, 50, 0.1).name('Y:').onChange(() => lightHelper.update());
-        sunFolder.add(directionalLight.position, 'z', -50, 50, 0.1).name('Z:').onChange(() => lightHelper.update());
+        // Lights
+        scene.add(new THREE.AmbientLight(0x855988, 0.8));
 
-        const lightProps = {
-            sunColor: '#ffffff',
-            ambientColor: '#404040',
-            showHelper: true
+        const dirLight = new THREE.DirectionalLight(0x070B34, 0.2);
+        dirLight.position.set(10, 15, 10);
+        dirLight.castShadow = true;
+        Object.assign(dirLight.shadow, { radius: 2, bias: -0.0003, normalBias: 0.03 });
+        Object.assign(dirLight.shadow.camera, { near: 0.5, far: 35, left: -15, right: 15, top: 15, bottom: -15 });
+        dirLight.shadow.mapSize.set(2048, 2048);
+        scene.add(dirLight);
+
+        // Interactive Spot & Point Lights
+        const createSpotLight = (color, intensity, angle, distance) => {
+            const light = new THREE.SpotLight(color, intensity, distance, angle, 0.6, 2);
+            light.castShadow = true;
+            Object.assign(light.shadow, { bias: -0.0005, normalBias: 0.02 });
+            light.shadow.mapSize.set(1024, 1024);
+            const target = new THREE.Object3D();
+            scene.add(target);
+            light.target = target;
+            scene.add(light);
+            return { light, target };
         };
 
-        const styleFolder = gui.addFolder('Brightness & Color');
-        styleFolder.add(directionalLight, 'intensity', 0, 5, 0.1).name('Intensity Sunlight');
-        styleFolder.addColor(lightProps, 'sunColor').name('Color Sunlight').onChange((value) => {
-            directionalLight.color.set(value);
+        const { light: tableLampLight } = createSpotLight(0xffddaa, 5, Math.PI / 6, 10);
+        const { light: boardSpotLight, target: boardLightTarget } = createSpotLight(0xffffff, 0, Math.PI / 8, 25);
+        boardSpotLight.shadow.mapSize.set(2048, 2048);
+
+        const floorLampLight = new THREE.PointLight(0xffe0b2, 3, 15);
+        floorLampLight.castShadow = true;
+        Object.assign(floorLampLight.shadow, { bias: -0.001, normalBias: 0.02 });
+        floorLampLight.shadow.mapSize.set(1024, 1024);
+        scene.add(floorLampLight);
+
+        // Dynamic Background Gradient
+        const bgCanvas = document.createElement('canvas');
+        bgCanvas.width = 2; bgCanvas.height = 512;
+        const bgContext = bgCanvas.getContext('2d');
+        const bgTexture = new THREE.CanvasTexture(bgCanvas);
+        scene.background = bgTexture;
+
+        const gradient = bgContext.createLinearGradient(0, 0, 0, 512);
+        gradient.addColorStop(0, '#070B34');
+        gradient.addColorStop(1, '#000000');
+        bgContext.fillStyle = gradient;
+        bgContext.fillRect(0, 0, 2, 512);
+        bgTexture.needsUpdate = true;
+
+        // Ground
+        const ground = new THREE.Mesh(
+            new THREE.CylinderGeometry(30, 30, 0.2, 64),
+            new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8, dithering: true })
+        );
+        ground.position.set(0, -0.1, 0);
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // media
+        const textureLoader = new THREE.TextureLoader();
+        const screenTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/Hello.png');
+        screenTexture.center.set(0.5, 0.5); screenTexture.rotation = Math.PI / 2; screenTexture.repeat.set(1, -1);
+
+        const phoneImageTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/Bgr.jpg');
+        phoneImageTexture.center.set(0.5, 0.5);
+
+        const phoneAudio = new Audio('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/BlueArchiveOST.mp3');
+        phoneAudio.loop = true; phoneAudio.volume = 0.2;
+        let isMusicPlaying = false;
+
+        // Toon Shader
+        const colors = new Uint8Array([0, 128, 255]);
+        const gradientMap = new THREE.DataTexture(colors, colors.length, 1, THREE.LuminanceFormat);
+        gradientMap.minFilter = gradientMap.magFilter = THREE.NearestFilter;
+        gradientMap.needsUpdate = true;
+
+        // Curtain Uniforms (สำหรับ Vertex Shader)
+        const curtainUniforms = {
+            uTime: { value: 0 }
+        };
+
+        // Meshes & Loader
+        const meshes = {};
+        let sceneMixer = null;
+        const loader = new THREE.GLTFLoader();
+
+        const setupShadows = (model, cast = true) => {
+            model.traverse(c => {
+                if (c.isMesh) {
+                    c.castShadow = cast; c.receiveShadow = true;
+                    if (c.material) { c.material.dithering = true; c.material.shadowSide = THREE.FrontSide; }
+                }
+            });
+        };
+
+        const base = 'https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/';
+        const models = [
+            { name: 'room', url: 'scene/scene06.glb', pos: [0, 0, 6] },
+            { name: 'tableLamp', url: 'intereact/tablelamp.glb', pos: [0, 0, 6] },
+            { name: 'monitor', url: 'intereact/comscreen.glb', pos: [0, 0, 5.98] },
+            { name: 'phone', url: 'intereact/phonescreen.glb', pos: [0, 0, 5.98] },
+            { name: 'floorLamp', url: 'intereact/lamp.glb', pos: [0, 0, 5.98] },
+            { name: 'kerby', url: 'intereact/kerby.glb', pos: [0, 0, 5.98] },
+            { name: 'board', url: 'intereact/bb3.glb', pos: [0, 0, 5.8] },
+            { name: 'curtain', url: 'scene/curtain01.glb', pos: [0, 0, 5.98] }
+        ];
+
+        models.forEach(item => {
+            loader.load(base + item.url, (gltf) => {
+                const model = gltf.scene;
+                model.position.set(...item.pos);
+                meshes[item.name] = model;
+
+                if (item.name === 'room') {
+                    setupShadows(model);
+                    if (gltf.animations?.length) {
+                        sceneMixer = new THREE.AnimationMixer(model);
+                        gltf.animations.forEach(clip => sceneMixer.clipAction(clip).play());
+                    }
+                } else if (item.name === 'tableLamp') {
+                    setupShadows(model);
+                    tableLampLight.position.set(-3.5, 2.9, 1.4);
+                    const lampTarget = new THREE.Object3D();
+                    model.add(lampTarget); model.add(tableLampLight);
+                    tableLampLight.target = lampTarget;
+                } else if (item.name === 'monitor') {
+                    model.traverse(c => { if(c.isMesh) { c.castShadow = c.receiveShadow = true; c.material = new THREE.MeshBasicMaterial({ map: screenTexture }); }});
+                } else if (item.name === 'phone') {
+                    model.traverse(c => { if(c.isMesh) { c.castShadow = c.receiveShadow = true; c.material = new THREE.MeshBasicMaterial({ map: phoneImageTexture, side: THREE.DoubleSide }); }});
+                } else if (item.name === 'floorLamp') {
+                    setupShadows(model, false);
+                    floorLampLight.position.copy(getMeshCenter(model));
+                } else if (item.name === 'kerby') {
+                    model.traverse(c => {
+                        if (c.isMesh) {
+                            c.castShadow = c.receiveShadow = true;
+                            c.material = new THREE.MeshToonMaterial({
+                                color: c.material.color || 0xffffff,
+                                map: c.material.map || null,
+                                gradientMap: gradientMap
+                            });
+                        }
+                    });
+                } else if (item.name === 'board') {
+                    setupShadows(model);
+                    const center = getMeshCenter(model);
+                    boardLightTarget.position.copy(center);
+                    boardSpotLight.position.set(center.x + 5, center.y + 2, center.z);
+                } else if (item.name === 'curtain') {
+                    setupShadows(model);
+                    // แทรก Vertex Shader ลงใน Material ของผ้าม่าน
+                    model.traverse(c => {
+                        if (c.isMesh && c.material) {
+                            c.material.onBeforeCompile = (shader) => {
+                                shader.uniforms.uTime = curtainUniforms.uTime;
+                                shader.vertexShader = `
+                                    uniform float uTime;
+                                ` + shader.vertexShader;
+
+                                shader.vertexShader = shader.vertexShader.replace(
+                                    '#include <begin_vertex>',
+                                    `
+                                    #include <begin_vertex>
+                                    // คำนวณความสูงเพื่อตรึงส่วนบนสุด และปล่อยส่วนล่างพริ้วไหว
+                                    float heightFactor = clamp((position.y + 2.0) / 5.0, 0.0, 1.0); 
+                                    
+                                    // คลื่น Sine สำหรับจำลองแรงลม
+                                    float wave = sin(position.y * 3.0 + uTime * 4.0) * 0.10;
+                                    wave += cos(position.x * 5.0 + uTime * 5.0) * 0.5;
+
+                                    transformed.z += wave * heightFactor;
+                                    transformed.x += (sin(uTime * 2.0 + position.y) * 0.02) * heightFactor;
+                                    `
+                                );
+                            };
+                            c.material.needsUpdate = true;
+                        }
+                    });
+                }
+                scene.add(model);
+            });
         });
 
-        styleFolder.add(abmientLight, 'intensity', 0, 3, 0.1).name('Ambient Light Intensity');
-        styleFolder.addColor(lightProps, 'ambientColor').name('Color Ambient').onChange((value) => {
-            abmientLight.color.set(value);
+        // Raycaster Interactivity
+        const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
+        const igBtn = { x: 275, y: 50, w: 135, h: 135 }, githubBtn = { x: 570, y: 50, w: 145, h: 130 };
+
+        function getMeshCenter(mesh) {
+            const box = new THREE.Box3().setFromObject(mesh), center = new THREE.Vector3();
+            return box.getCenter(center);
+        }
+
+        function focusOn(targetCenter, camOffset) {
+            targetLookAt.copy(targetCenter);
+            targetCamPos.copy(targetCenter).add(camOffset);
+            if (targetCamPos.y < 0.5) targetCamPos.y = 0.5;
+            isTransitioning = true;
+        }
+
+        function getCanvasCoordinates(uv) {
+            return { canvasX: (1 - uv.y) * 1024, canvasY: (1 - uv.x) * 512 };
+        }
+
+        window.addEventListener('click', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const hit = (mesh) => mesh && raycaster.intersectObject(mesh, true).length > 0;
+
+            if (hit(meshes.tableLamp)) return tableLampLight.intensity = tableLampLight.intensity === 0 ? 5 : 0;
+            if (hit(meshes.floorLamp)) return floorLampLight.intensity = floorLampLight.intensity === 0 ? 3 : 0;
+
+            if (hit(meshes.monitor)) {
+                boardSpotLight.intensity = 0; if (phoneAudio) phoneAudio.pause();
+                const intersects = raycaster.intersectObject(meshes.monitor, true);
+                if (intersects[0]?.uv) {
+                    const { canvasX, canvasY } = getCanvasCoordinates(intersects[0].uv);
+                    if (canvasX >= igBtn.x && canvasX <= igBtn.x + igBtn.w && canvasY >= igBtn.y && canvasY <= igBtn.y + igBtn.h) return window.open('https://www.instagram.com/_trinnaphat/', '_blank');
+                    if (canvasX >= githubBtn.x && canvasX <= githubBtn.x + githubBtn.w && canvasY >= githubBtn.y && canvasY <= githubBtn.y + githubBtn.h) return window.open('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/', '_blank');
+                }
+                return focusOn(getMeshCenter(meshes.monitor), new THREE.Vector3(2, 0.5, 0));
+            }
+
+            if (hit(meshes.phone)) {
+                boardSpotLight.intensity = 0;
+                focusOn(getMeshCenter(meshes.phone), new THREE.Vector3(0, 1, 0));
+                isMusicPlaying = !isMusicPlaying;
+                isMusicPlaying ? phoneAudio.play().catch(() => {}) : phoneAudio.pause();
+                return;
+            }
+
+            if (hit(meshes.kerby)) {
+                boardSpotLight.intensity = 0; if (phoneAudio) phoneAudio.pause();
+                return focusOn(getMeshCenter(meshes.kerby), new THREE.Vector3(2, 0.5, 2));
+            }
+
+            if (hit(meshes.board)) {
+                if (phoneAudio) phoneAudio.pause();
+                focusOn(getMeshCenter(meshes.board), new THREE.Vector3(2, 0, 0));
+                return boardSpotLight.intensity = 5;
+            }
+
+            resetCamera();
         });
 
-        gui.add(lightProps, 'showHelper').name('Helper').onChange((visible) => {
-            lightHelper.visible = visible;
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            let isHovering = false;
+            if (meshes.monitor) {
+                const intersects = raycaster.intersectObject(meshes.monitor, true);
+                if (intersects[0]?.uv) {
+                    const { canvasX, canvasY } = getCanvasCoordinates(intersects[0].uv);
+                    isHovering = (canvasX >= igBtn.x && canvasX <= igBtn.x + igBtn.w && canvasY >= igBtn.y && canvasY <= igBtn.y + igBtn.h) ||
+                                 (canvasX >= githubBtn.x && canvasX <= githubBtn.x + githubBtn.w && canvasY >= githubBtn.y && canvasY <= githubBtn.y + githubBtn.h);
+                }
+            }
+
+            if (!isHovering) {
+                isHovering = Object.values(meshes).some(obj => raycaster.intersectObject(obj, true).length > 0);
+            }
+            document.body.style.cursor = isHovering ? 'pointer' : 'default';
         });
 
+        // Main Animation Loop
+        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const elapsedTime = clock.getElapsedTime();
+
             
-            // อัปเดต controls ในทุกเฟรมเพื่อประมวลผล Damping ให้ลื่นไหล
-            controls.update(); 
-            
+            curtainUniforms.uTime.value = elapsedTime;
+
+            if (sceneMixer) sceneMixer.update(delta);
+            if (isMusicPlaying && phoneAudio.paused) phoneAudio.play().catch(() => {});
+
+            if (isTransitioning) {
+                camera.position.lerp(targetCamPos, 0.05);
+                controls.target.lerp(targetLookAt, 0.05);
+                if (camera.position.distanceTo(targetCamPos) < 0.01 && controls.target.distanceTo(targetLookAt) < 0.01) {
+                    camera.position.copy(targetCamPos);
+                    controls.target.copy(targetLookAt);
+                    isTransitioning = false;
+                }
+            }
+            if (camera.position.y < 0.5) camera.position.y = 0.5;
+
+            controls.update();
             renderer.render(scene, camera);
         }
         animate();
 
-        // Responsive Resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -137,5 +339,4 @@
         });
     </script>
 </body>
-
 </html>
