@@ -96,7 +96,7 @@
 
         // media
         const textureLoader = new THREE.TextureLoader();
-        const screenTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/Hello.png');
+        const screenTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/hi.png');
         screenTexture.center.set(0.5, 0.5); screenTexture.rotation = Math.PI / 2; screenTexture.repeat.set(1, -1);
 
         const phoneImageTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/Bgr.jpg');
@@ -140,7 +140,8 @@
             { name: 'floorLamp', url: 'intereact/lamp.glb', pos: [0, 0, 5.98] },
             { name: 'kerby', url: 'intereact/kerby.glb', pos: [0, 0, 5.98] },
             { name: 'board', url: 'intereact/bb3.glb', pos: [0, 0, 5.8] },
-            { name: 'curtain', url: 'scene/curtain01.glb', pos: [0, 0, 5.98] }
+            { name: 'curtain', url: 'scene/curtain01.glb', pos: [0, 0, 5.98] },
+            { name: 'kutext', url: 'scene/KUtext.glb', pos: [0, 0, 5.98] }
         ];
 
         models.forEach(item => {
@@ -221,7 +222,7 @@
 
         // Raycaster Interactivity
         const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
-        const igBtn = { x: 275, y: 50, w: 135, h: 135 }, githubBtn = { x: 570, y: 50, w: 145, h: 130 };
+        const githubBtn = { x: 420, y: 50, w: 145, h: 130 };
 
         function getMeshCenter(mesh) {
             const box = new THREE.Box3().setFromObject(mesh), center = new THREE.Vector3();
@@ -254,7 +255,6 @@
                 const intersects = raycaster.intersectObject(meshes.monitor, true);
                 if (intersects[0]?.uv) {
                     const { canvasX, canvasY } = getCanvasCoordinates(intersects[0].uv);
-                    if (canvasX >= igBtn.x && canvasX <= igBtn.x + igBtn.w && canvasY >= igBtn.y && canvasY <= igBtn.y + igBtn.h) return window.open('https://www.instagram.com/_trinnaphat/', '_blank');
                     if (canvasX >= githubBtn.x && canvasX <= githubBtn.x + githubBtn.w && canvasY >= githubBtn.y && canvasY <= githubBtn.y + githubBtn.h) return window.open('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/', '_blank');
                 }
                 return focusOn(getMeshCenter(meshes.monitor), new THREE.Vector3(2, 0.5, 0));
