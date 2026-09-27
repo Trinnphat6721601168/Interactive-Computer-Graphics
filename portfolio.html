@@ -96,14 +96,14 @@
 
         // media
         const textureLoader = new THREE.TextureLoader();
-        const screenTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/hi.png');
+        const screenTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/gehena.png');
         screenTexture.center.set(0.5, 0.5); screenTexture.rotation = Math.PI / 2; screenTexture.repeat.set(1, -1);
 
-        const phoneImageTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/Bgr.jpg');
+        const phoneImageTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/ms.jpg');
         phoneImageTexture.center.set(0.5, 0.5);
 
-        const phoneAudio = new Audio('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/BlueArchiveOST.mp3');
-        phoneAudio.loop = true; phoneAudio.volume = 0.2;
+        const phoneAudio = new Audio('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/Barns Courtney - Fire.mp3');
+        phoneAudio.loop = true; phoneAudio.volume = 0.3;
         let isMusicPlaying = false;
 
         // Toon Shader
@@ -136,7 +136,7 @@
             { name: 'room', url: 'scene/scene06.glb', pos: [0, 0, 6] },
             { name: 'tableLamp', url: 'intereact/tablelamp.glb', pos: [0, 0, 6] },
             { name: 'monitor', url: 'intereact/comscreen.glb', pos: [0, 0, 5.98] },
-            { name: 'phone', url: 'intereact/phonescreen.glb', pos: [0, 0, 5.98] },
+            { name: 'phone', url: 'intereact/phonescreen.glb', pos: [0, 0, 6] },
             { name: 'floorLamp', url: 'intereact/lamp.glb', pos: [0, 0, 5.98] },
             { name: 'kerby', url: 'intereact/kerby.glb', pos: [0, 0, 5.98] },
             { name: 'board', url: 'intereact/bb3.glb', pos: [0, 0, 5.8] },
@@ -222,7 +222,7 @@
 
         // Raycaster Interactivity
         const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
-        const githubBtn = { x: 420, y: 50, w: 145, h: 130 };
+        const githubBtn = { x: 420, y: 100, w: 145, h: 130 };
 
         function getMeshCenter(mesh) {
             const box = new THREE.Box3().setFromObject(mesh), center = new THREE.Vector3();
