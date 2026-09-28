@@ -48,43 +48,21 @@
             isTransitioning = false;
         });
 
-        const ambientLight = new THREE.AmbientLight(0x855988, 0.8);
+        const ambientLight = new THREE.AmbientLight(0x855988, 0.2);
         scene.add(ambientLight);
 
         const tableLampLight = new THREE.SpotLight(0xffddaa, 5);
-        tableLampLight.angle = Math.PI / 6;
-        tableLampLight.penumbra = 0.6;
-        tableLampLight.decay = 2;
-        tableLampLight.distance = 10;
+        tableLampLight.angle = Math.PI / 16;
         tableLampLight.castShadow = true;
-        tableLampLight.shadow.mapSize.width = 1024;
-        tableLampLight.shadow.mapSize.height = 1024;
-        tableLampLight.shadow.bias = -0.0005;
-        tableLampLight.shadow.normalBias = 0.02;
-
-        const spotLightTarget = new THREE.Object3D();
-        scene.add(spotLightTarget);
-        tableLampLight.target = spotLightTarget;
-        scene.add(tableLampLight);
-
+       
         const floorLampLight = new THREE.PointLight(0xffe0b2, 3, 15);
         floorLampLight.castShadow = true;
-        floorLampLight.shadow.mapSize.width = 1024;
-        floorLampLight.shadow.mapSize.height = 1024;
-        floorLampLight.shadow.bias = -0.001;
-        floorLampLight.shadow.normalBias = 0.02;
         scene.add(floorLampLight);
 
-        const boardSpotLight = new THREE.SpotLight(0xffffff, 0);
+        const boardSpotLight = new THREE.SpotLight(0x636363, 0.1);
         boardSpotLight.angle = Math.PI / 8;
-        boardSpotLight.penumbra = 0.8;
-        boardSpotLight.decay = 2;
-        boardSpotLight.distance = 25;
         boardSpotLight.castShadow = true;
-        boardSpotLight.shadow.mapSize.width = 2048;
-        boardSpotLight.shadow.mapSize.height = 2048;
-        boardSpotLight.shadow.bias = -0.0005;
-        boardSpotLight.shadow.normalBias = 0.02;
+     
 
         const boardLightTarget = new THREE.Object3D();
         scene.add(boardLightTarget);
@@ -126,19 +104,19 @@
         const clock = new THREE.Clock();
 
         const textureLoader = new THREE.TextureLoader();
-        const screenTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/gehena.png');
+        const screenTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/desktop.png');
 
-        const phoneAudio = new Audio('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/Barns Courtney - Fire.mp3');
+        const phoneAudio = new Audio('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/BlueArchiveOST.mp3');
         phoneAudio.loop = true;
-        phoneAudio.volume = 0.2;
+        phoneAudio.volume = 0.1;
         let isMusicPlaying = false;
 
-        const phoneImageTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/ms.jpg');
+        const phoneImageTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/IMG_20260929_001020.jpg');
         phoneImageTexture.center.set(0.5, 0.5);
         phoneImageTexture.rotation = 0;
         phoneImageTexture.repeat.set(1, 1);
 
-        const githubBtn = { x: 420, y: 100, w: 145, h: 130 };
+        const githubBtn = { x: 810, y: 50, w: 145, h: 130 };
 
         const curtainUniforms = {
             uTime: { value: 0.0 }
@@ -157,16 +135,12 @@
 
             void main() {
                 vUv = uv;
-                
-                // คำนวณ Normal และ Position ในระดับ World Space เพื่อให้คำนวณแสงถูกต้อง
+
                 vNormal = normalize(normalMatrix * normal);
                 vec4 worldPosition = modelMatrix * vec4(position, 1.0);
                 vPosW = worldPosition.xyz;
 
                 vec3 pos = position;
-                // หากต้องการใส่เอฟเฟกต์ดึ๋งๆ เล็กน้อย สามารถใส่ wave เหมือนภาพที่ส่งมาได้
-                // pos.z += sin(pos.x * 5.0 + uTime) * 0.02;
-
                 gl_Position = projectionMatrix * viewMatrix * worldPosition;
             }
         `;
@@ -185,20 +159,17 @@
                 vec3 N = normalize(vNormal);
                 vec3 L = normalize(uLightDir);
 
-                // Lambert + Cel Shading (ทำขั้นบันไดแสง)
                 float diffuse = max(dot(N, L), 0.0);
                 float level = 3.0;
                 diffuse = floor(diffuse * level) / level;
 
                 float ambient = 0.4;
 
-                // Phong Specular Highlight
                 vec3 R = reflect(-L, N);
                 vec3 V = normalize(cameraPosition - vPosW);
                 float specular = pow(max(dot(R, V), 0.0), 16.0);
                 specular = smoothstep(0.1, 0.6, specular);
 
-                // ดึง สีจาก Texture ดั้งเดิมของ Kerby (ถ้าไม่มีจะใช้สีชมพู)
                 vec4 texColor = texture2D(uTexture, vUv);
                 vec3 baseColor = (texColor.a > 0.1) ? texColor.rgb : vec3(0.98, 0.6, 0.75);
 
@@ -208,24 +179,10 @@
             }
         `;
 
-        function setupMeshShadows(model) {
-            model.traverse(c => {
-                if(c.isMesh) {
-                    c.castShadow = true;
-                    c.receiveShadow = true;
-                    if(c.material) {
-                        c.material.dithering = true;
-                        c.material.shadowSide = THREE.FrontSide;
-                    }
-                }
-            });
-        }
-
         const loader = new THREE.GLTFLoader();
         // 1. ห้อง
         loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//scene/scene06.glb', (gltf) => {
             const model = gltf.scene;
-            setupMeshShadows(model);
             model.position.set(0, 0, 6);
             scene.add(model);
             if (gltf.animations && gltf.animations.length > 0) {
@@ -239,8 +196,6 @@
         // 1.2 ผ้าม่าน
         loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//scene/curtain01.glb', (gltf) => {
             const model = gltf.scene;
-            setupMeshShadows(model);
-
             model.traverse(c => {
                 if(c.isMesh && c.material) {
                     c.material.side = THREE.DoubleSide;
@@ -268,18 +223,9 @@
             scene.add(model);
         });
 
-        // 1.3 อักษร
-        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//scene/kutxt01.glb', (gltf) => {
-            const model = gltf.scene;
-            setupMeshShadows(model);
-            model.position.set(0, 0, 6);
-            scene.add(model);
-        });
-
         // 2. โคมไฟโต๊ะ
         loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/tablelamp.glb', (gltf) => {
             const model = gltf.scene;
-            setupMeshShadows(model);
             model.position.set(0, 0, 6);
             tableLampMesh = model;
             scene.add(model);
@@ -386,9 +332,8 @@
         scene.add(model);
     });
         // 7. กระดานดำ
-        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/intereact/bb3.glb', (gltf) => {
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/intereact/bb04.glb', (gltf) => {
             const model = gltf.scene;
-            setupMeshShadows(model);
             model.position.set(0, 0, 5.8);
             boardMesh = model;
             scene.add(model);
@@ -397,6 +342,7 @@
             boardSpotLight.position.set(center.x + 5, center.y + 2, center.z);
         }); 
         
+        //raycaster&events
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
