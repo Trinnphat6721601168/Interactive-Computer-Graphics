@@ -2,15 +2,20 @@
 <html>
 <head>
     <title>Portfolio</title>
-    <style>body { margin: 0; overflow: hidden; }</style>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
 </head>
 <body>
+
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
     <script>
-        // Setup Renderer, Scene & Base Configs
+
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
@@ -19,303 +24,489 @@
         document.body.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
-        const defaultCamPos = new THREE.Vector3(0, 10, 20), defaultTargetPos = new THREE.Vector3(0, 0, 0);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const defaultCamPos = new THREE.Vector3(0, 10, 20);
+        const defaultTargetPos = new THREE.Vector3(0, 0, 0);
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
         camera.position.copy(defaultCamPos);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        Object.assign(controls, { 
-            enableDamping: true, 
-            dampingFactor: 0.05, 
-            rotateSpeed: 0.8,
-            maxPolarAngle: Math.PI / 2 - 0.05 
-        });
+        controls.enableDamping = true;  
+        controls.dampingFactor = 0.05;  
+        controls.rotateSpeed = 0.8;      
         controls.target.copy(defaultTargetPos);
 
-        // Smooth Camera Controls
-        let targetCamPos = defaultCamPos.clone(), targetLookAt = defaultTargetPos.clone(), isTransitioning = false;
-        controls.addEventListener('start', () => isTransitioning = false);
+        let targetCamPos = defaultCamPos.clone();
+        let targetLookAt = defaultTargetPos.clone();
+        let isTransitioning = false;
 
-        // Lights
-        scene.add(new THREE.AmbientLight(0x855988, 0.8));
+        controls.addEventListener('start', () => {
+            isTransitioning = false;
+        });
 
-        const dirLight = new THREE.DirectionalLight(0x070B34, 0.2);
-        dirLight.position.set(10, 15, 10);
-        dirLight.castShadow = true;
-        Object.assign(dirLight.shadow, { radius: 2, bias: -0.0003, normalBias: 0.03 });
-        Object.assign(dirLight.shadow.camera, { near: 0.5, far: 35, left: -15, right: 15, top: 15, bottom: -15 });
-        dirLight.shadow.mapSize.set(2048, 2048);
-        scene.add(dirLight);
+        const ambientLight = new THREE.AmbientLight(0x855988, 0.8);
+        scene.add(ambientLight);
 
-        // Interactive Spot & Point Lights
-        const createSpotLight = (color, intensity, angle, distance) => {
-            const light = new THREE.SpotLight(color, intensity, distance, angle, 0.6, 2);
-            light.castShadow = true;
-            Object.assign(light.shadow, { bias: -0.0005, normalBias: 0.02 });
-            light.shadow.mapSize.set(1024, 1024);
-            const target = new THREE.Object3D();
-            scene.add(target);
-            light.target = target;
-            scene.add(light);
-            return { light, target };
-        };
+        const tableLampLight = new THREE.SpotLight(0xffddaa, 5);
+        tableLampLight.angle = Math.PI / 6;
+        tableLampLight.penumbra = 0.6;
+        tableLampLight.decay = 2;
+        tableLampLight.distance = 10;
+        tableLampLight.castShadow = true;
+        tableLampLight.shadow.mapSize.width = 1024;
+        tableLampLight.shadow.mapSize.height = 1024;
+        tableLampLight.shadow.bias = -0.0005;
+        tableLampLight.shadow.normalBias = 0.02;
 
-        const { light: tableLampLight } = createSpotLight(0xffddaa, 5, Math.PI / 6, 10);
-        const { light: boardSpotLight, target: boardLightTarget } = createSpotLight(0xffffff, 0, Math.PI / 8, 25);
-        boardSpotLight.shadow.mapSize.set(2048, 2048);
+        const spotLightTarget = new THREE.Object3D();
+        scene.add(spotLightTarget);
+        tableLampLight.target = spotLightTarget;
+        scene.add(tableLampLight);
 
         const floorLampLight = new THREE.PointLight(0xffe0b2, 3, 15);
         floorLampLight.castShadow = true;
-        Object.assign(floorLampLight.shadow, { bias: -0.001, normalBias: 0.02 });
-        floorLampLight.shadow.mapSize.set(1024, 1024);
+        floorLampLight.shadow.mapSize.width = 1024;
+        floorLampLight.shadow.mapSize.height = 1024;
+        floorLampLight.shadow.bias = -0.001;
+        floorLampLight.shadow.normalBias = 0.02;
         scene.add(floorLampLight);
 
-        // Dynamic Background Gradient
+        const boardSpotLight = new THREE.SpotLight(0xffffff, 0);
+        boardSpotLight.angle = Math.PI / 8;
+        boardSpotLight.penumbra = 0.8;
+        boardSpotLight.decay = 2;
+        boardSpotLight.distance = 25;
+        boardSpotLight.castShadow = true;
+        boardSpotLight.shadow.mapSize.width = 2048;
+        boardSpotLight.shadow.mapSize.height = 2048;
+        boardSpotLight.shadow.bias = -0.0005;
+        boardSpotLight.shadow.normalBias = 0.02;
+
+        const boardLightTarget = new THREE.Object3D();
+        scene.add(boardLightTarget);
+        boardSpotLight.target = boardLightTarget;
+        scene.add(boardSpotLight);
+
+        let tableLampMesh = null;
+        let floorLampMesh = null;
+        let monitorMesh = null;
+        let phoneMesh = null;
+        let kerbyMesh = null;
+        let boardMesh = null;
+
         const bgCanvas = document.createElement('canvas');
-        bgCanvas.width = 2; bgCanvas.height = 512;
+        bgCanvas.width = 2;
+        bgCanvas.height = 512;
         const bgContext = bgCanvas.getContext('2d');
         const bgTexture = new THREE.CanvasTexture(bgCanvas);
         scene.background = bgTexture;
 
-        const gradient = bgContext.createLinearGradient(0, 0, 0, 512);
-        gradient.addColorStop(0, '#070B34');
-        gradient.addColorStop(1, '#000000');
-        bgContext.fillStyle = gradient;
-        bgContext.fillRect(0, 0, 2, 512);
-        bgTexture.needsUpdate = true;
+        function updateBackground() {
+            const gradient = bgContext.createLinearGradient(0, 0, 0, 512);
+            gradient.addColorStop(0, '#070B34');
+            gradient.addColorStop(1, '#000000');
+            bgContext.fillStyle = gradient;
+            bgContext.fillRect(0, 0, 2, 512);
+            bgTexture.needsUpdate = true;
+        }
+        updateBackground();
 
-        // Ground
-        const ground = new THREE.Mesh(
-            new THREE.CylinderGeometry(30, 30, 0.2, 64),
-            new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8, dithering: true })
-        );
+        const groundGeometry = new THREE.CylinderGeometry(30, 30, 0.2, 64);
+        const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8, dithering: true });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.position.set(0, -0.1, 0);
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // media
+        let sceneMixer = null;
+        const clock = new THREE.Clock();
+
         const textureLoader = new THREE.TextureLoader();
         const screenTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/gehena.png');
-        screenTexture.center.set(0.5, 0.5); screenTexture.rotation = Math.PI / 2; screenTexture.repeat.set(1, -1);
+
+        const phoneAudio = new Audio('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/Barns Courtney - Fire.mp3');
+        phoneAudio.loop = true;
+        phoneAudio.volume = 0.2;
+        let isMusicPlaying = false;
 
         const phoneImageTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/ms.jpg');
         phoneImageTexture.center.set(0.5, 0.5);
+        phoneImageTexture.rotation = 0;
+        phoneImageTexture.repeat.set(1, 1);
 
-        const phoneAudio = new Audio('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/Barns Courtney - Fire.mp3');
-        phoneAudio.loop = true; phoneAudio.volume = 0.3;
-        let isMusicPlaying = false;
-
-        // Toon Shader
-        const colors = new Uint8Array([0, 128, 255]);
-        const gradientMap = new THREE.DataTexture(colors, colors.length, 1, THREE.LuminanceFormat);
-        gradientMap.minFilter = gradientMap.magFilter = THREE.NearestFilter;
-        gradientMap.needsUpdate = true;
-
-        // Curtain Uniforms (สำหรับ Vertex Shader)
-        const curtainUniforms = {
-            uTime: { value: 0 }
-        };
-
-        // Meshes & Loader
-        const meshes = {};
-        let sceneMixer = null;
-        const loader = new THREE.GLTFLoader();
-
-        const setupShadows = (model, cast = true) => {
-            model.traverse(c => {
-                if (c.isMesh) {
-                    c.castShadow = cast; c.receiveShadow = true;
-                    if (c.material) { c.material.dithering = true; c.material.shadowSide = THREE.FrontSide; }
-                }
-            });
-        };
-
-        const base = 'https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/';
-        const models = [
-            { name: 'room', url: 'scene/scene06.glb', pos: [0, 0, 6] },
-            { name: 'tableLamp', url: 'intereact/tablelamp.glb', pos: [0, 0, 6] },
-            { name: 'monitor', url: 'intereact/comscreen.glb', pos: [0, 0, 5.98] },
-            { name: 'phone', url: 'intereact/phonescreen.glb', pos: [0, 0, 6] },
-            { name: 'floorLamp', url: 'intereact/lamp.glb', pos: [0, 0, 5.98] },
-            { name: 'kerby', url: 'intereact/kerby.glb', pos: [0, 0, 5.98] },
-            { name: 'board', url: 'intereact/bb3.glb', pos: [0, 0, 5.8] },
-            { name: 'curtain', url: 'scene/curtain01.glb', pos: [0, 0, 5.98] },
-            { name: 'kutext', url: 'scene/kutxt01.glb', pos: [0, 0, 5.2] }
-        ];
-
-        models.forEach(item => {
-            loader.load(base + item.url, (gltf) => {
-                const model = gltf.scene;
-                model.position.set(...item.pos);
-                meshes[item.name] = model;
-
-                if (item.name === 'room') {
-                    setupShadows(model);
-                    if (gltf.animations?.length) {
-                        sceneMixer = new THREE.AnimationMixer(model);
-                        gltf.animations.forEach(clip => sceneMixer.clipAction(clip).play());
-                    }
-                } else if (item.name === 'tableLamp') {
-                    setupShadows(model);
-                    tableLampLight.position.set(-3.5, 2.9, 1.4);
-                    const lampTarget = new THREE.Object3D();
-                    model.add(lampTarget); model.add(tableLampLight);
-                    tableLampLight.target = lampTarget;
-                } else if (item.name === 'monitor') {
-                    model.traverse(c => { if(c.isMesh) { c.castShadow = c.receiveShadow = true; c.material = new THREE.MeshBasicMaterial({ map: screenTexture }); }});
-                } else if (item.name === 'phone') {
-                    model.traverse(c => { if(c.isMesh) { c.castShadow = c.receiveShadow = true; c.material = new THREE.MeshBasicMaterial({ map: phoneImageTexture, side: THREE.DoubleSide }); }});
-                } else if (item.name === 'floorLamp') {
-                    setupShadows(model, false);
-                    floorLampLight.position.copy(getMeshCenter(model));
-                } else if (item.name === 'kerby') {
-                    model.traverse(c => {
-                        if (c.isMesh) {
-                            c.castShadow = c.receiveShadow = true;
-                            c.material = new THREE.MeshToonMaterial({
-                                color: c.material.color || 0xffffff,
-                                map: c.material.map || null,
-                                gradientMap: gradientMap
-                            });
-                        }
-                    });
-                } else if (item.name === 'board') {
-                    setupShadows(model);
-                    const center = getMeshCenter(model);
-                    boardLightTarget.position.copy(center);
-                    boardSpotLight.position.set(center.x + 5, center.y + 2, center.z);
-                } else if (item.name === 'curtain') {
-                    setupShadows(model);
-                    // แทรก Vertex Shader ลงใน Material ของผ้าม่าน
-                    model.traverse(c => {
-                        if (c.isMesh && c.material) {
-                            c.material.onBeforeCompile = (shader) => {
-                                shader.uniforms.uTime = curtainUniforms.uTime;
-                                shader.vertexShader = `
-                                    uniform float uTime;
-                                ` + shader.vertexShader;
-
-                                shader.vertexShader = shader.vertexShader.replace(
-                                    '#include <begin_vertex>',
-                                    `
-                                    #include <begin_vertex>
-                                    // คำนวณความสูงเพื่อตรึงส่วนบนสุด และปล่อยส่วนล่างพริ้วไหว
-                                    float heightFactor = clamp((position.y + 2.0) / 5.0, 0.0, 1.0); 
-                                    
-                                    // คลื่น Sine สำหรับจำลองแรงลม
-                                    float wave = sin(position.y * 3.0 + uTime * 4.0) * 0.10;
-                                    wave += cos(position.x * 5.0 + uTime * 5.0) * 0.5;
-
-                                    transformed.z += wave * heightFactor;
-                                    transformed.x += (sin(uTime * 2.0 + position.y) * 0.02) * heightFactor;
-                                    `
-                                );
-                            };
-                            c.material.needsUpdate = true;
-                        }
-                    });
-                }
-                scene.add(model);
-            });
-        });
-
-        // Raycaster Interactivity
-        const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
         const githubBtn = { x: 420, y: 100, w: 145, h: 130 };
 
+        const curtainUniforms = {
+            uTime: { value: 0.0 }
+        };
+
+        const celShaderUniforms = {
+            uTime: { value: 0.0 },
+            uLightDir: { value: new THREE.Vector3(0.4, 1.0, 0.8).normalize() },
+            uTexture: { value: null }
+        };
+        const celVertexShader = `
+            uniform float uTime;
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            varying vec3 vPosW;
+
+            void main() {
+                vUv = uv;
+                
+                // คำนวณ Normal และ Position ในระดับ World Space เพื่อให้คำนวณแสงถูกต้อง
+                vNormal = normalize(normalMatrix * normal);
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vPosW = worldPosition.xyz;
+
+                vec3 pos = position;
+                // หากต้องการใส่เอฟเฟกต์ดึ๋งๆ เล็กน้อย สามารถใส่ wave เหมือนภาพที่ส่งมาได้
+                // pos.z += sin(pos.x * 5.0 + uTime) * 0.02;
+
+                gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            }
+        `;
+        const celFragmentShader = `
+            precision mediump float;
+
+            uniform float uTime;
+            uniform sampler2D uTexture;
+            uniform vec3 uLightDir;
+
+            varying vec2 vUv;
+            varying vec3 vNormal;
+            varying vec3 vPosW;
+
+            void main() {
+                vec3 N = normalize(vNormal);
+                vec3 L = normalize(uLightDir);
+
+                // Lambert + Cel Shading (ทำขั้นบันไดแสง)
+                float diffuse = max(dot(N, L), 0.0);
+                float level = 3.0;
+                diffuse = floor(diffuse * level) / level;
+
+                float ambient = 0.4;
+
+                // Phong Specular Highlight
+                vec3 R = reflect(-L, N);
+                vec3 V = normalize(cameraPosition - vPosW);
+                float specular = pow(max(dot(R, V), 0.0), 16.0);
+                specular = smoothstep(0.1, 0.6, specular);
+
+                // ดึง สีจาก Texture ดั้งเดิมของ Kerby (ถ้าไม่มีจะใช้สีชมพู)
+                vec4 texColor = texture2D(uTexture, vUv);
+                vec3 baseColor = (texColor.a > 0.1) ? texColor.rgb : vec3(0.98, 0.6, 0.75);
+
+                vec3 finalColor = baseColor * (diffuse + ambient) + vec3(specular * 0.4);
+
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+        `;
+
+        function setupMeshShadows(model) {
+            model.traverse(c => {
+                if(c.isMesh) {
+                    c.castShadow = true;
+                    c.receiveShadow = true;
+                    if(c.material) {
+                        c.material.dithering = true;
+                        c.material.shadowSide = THREE.FrontSide;
+                    }
+                }
+            });
+        }
+
+        const loader = new THREE.GLTFLoader();
+        // 1. ห้อง
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//scene/scene06.glb', (gltf) => {
+            const model = gltf.scene;
+            setupMeshShadows(model);
+            model.position.set(0, 0, 6);
+            scene.add(model);
+            if (gltf.animations && gltf.animations.length > 0) {
+                sceneMixer = new THREE.AnimationMixer(model);
+                gltf.animations.forEach((clip) => {
+                    sceneMixer.clipAction(clip).play();
+                });
+            }
+        });
+
+        // 1.2 ผ้าม่าน
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//scene/curtain01.glb', (gltf) => {
+            const model = gltf.scene;
+            setupMeshShadows(model);
+
+            model.traverse(c => {
+                if(c.isMesh && c.material) {
+                    c.material.side = THREE.DoubleSide;
+                    c.material.onBeforeCompile = (shader) => {
+                        shader.uniforms.uTime = curtainUniforms.uTime;
+
+                        shader.vertexShader = `
+                            uniform float uTime;
+                        ` + shader.vertexShader;
+
+                        shader.vertexShader = shader.vertexShader.replace(
+                            '#include <begin_vertex>',
+                            `
+                            #include <begin_vertex>
+                            float wave = sin(transformed.y * 3.0 + uTime * 3.0) * 0.1 * (1.0 - uv.y);
+                            transformed.z += wave;
+                            transformed.x += sin(transformed.y * 2.0 + uTime * 2.0) * 0.05 * (1.0 - uv.y);
+                            `
+                        );
+                    };
+                }
+            });
+
+            model.position.set(0, 0, 6);
+            scene.add(model);
+        });
+
+        // 1.3 อักษร
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//scene/kutxt01.glb', (gltf) => {
+            const model = gltf.scene;
+            setupMeshShadows(model);
+            model.position.set(0, 0, 6);
+            scene.add(model);
+        });
+
+        // 2. โคมไฟโต๊ะ
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/tablelamp.glb', (gltf) => {
+            const model = gltf.scene;
+            setupMeshShadows(model);
+            model.position.set(0, 0, 6);
+            tableLampMesh = model;
+            scene.add(model);
+            tableLampLight.position.set(-3.5, 2.9, 1.4);
+            const lampTarget = new THREE.Object3D();
+            lampTarget.position.set(0, 0, 0);
+            model.add(lampTarget);
+            model.add(tableLampLight);
+            tableLampLight.target = lampTarget;
+        });
+
+        // 3. หน้าจอคอม
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/comscreen.glb', (gltf) => {
+            const model = gltf.scene;
+            screenTexture.center.set(0.5, 0.5);
+            screenTexture.rotation = Math.PI / 2;
+            screenTexture.repeat.set(1, -1);
+            model.traverse(c => {
+                if(c.isMesh) {
+                    c.castShadow = true;
+                    c.receiveShadow = true;
+                    c.material = new THREE.MeshBasicMaterial({ map: screenTexture });
+                }
+            });
+            model.position.set(0, 0, 5.98);
+            monitorMesh = model;
+            scene.add(model);
+        });
+
+        // 4. หน้าจอมือถือ
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/phonescreen.glb', (gltf) => {
+            const model = gltf.scene;
+            model.traverse(c => {
+                if(c.isMesh) {
+                    c.castShadow = true;
+                    c.receiveShadow = true;
+                    c.material = new THREE.MeshBasicMaterial({
+                        map: phoneImageTexture,
+                        side: THREE.DoubleSide
+                    });
+                }
+            });
+            model.position.set(0, 0, 5.98);
+            phoneMesh = model;
+            scene.add(model);
+        });
+
+        // 5. โคมไฟพื้น
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/lamp.glb', (gltf) => {
+            const model = gltf.scene;
+            model.traverse(c => {
+                if(c.isMesh) {
+                    c.castShadow = false;
+                    c.receiveShadow = true;
+                    if(c.material) {
+                        c.material.dithering = true;
+                        c.material.shadowSide = THREE.FrontSide;
+                    }
+                }
+            });
+            model.position.set(0, 0, 5.98);
+            floorLampMesh = model;
+            scene.add(model);
+
+            const box = new THREE.Box3().setFromObject(model);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            floorLampLight.position.copy(center);
+        });
+
+        // 6. เคอร์บี้ 
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/kerby.glb', (gltf) => {
+            const model = gltf.scene;
+            model.traverse(c => {
+                if (c.isMesh && c.material) {
+                    c.castShadow = true;
+                    c.receiveShadow = true;
+                    c.material.onBeforeCompile = (shader) => {
+                        shader.uniforms.uLightDir = celShaderUniforms.uLightDir;
+                        shader.fragmentShader = `
+                            uniform vec3 uLightDir;
+                        ` + shader.fragmentShader;
+                        shader.fragmentShader = shader.fragmentShader.replace(
+                            '#include <lights_fragment_begin>',
+                            `
+                            #include <lights_fragment_begin>
+                      
+                            vec3 N = normalize(vNormal);
+                            vec3 L = normalize(uLightDir);
+                            float NdotL = max(dot(N, L), 0.0);
+                         
+                            float level = 3.0;
+                            float celIntensity = floor(NdotL * level) / level;
+
+                            reflectedLight.directDiffuse *= celIntensity;
+                            `
+                        );
+                    };
+                }
+            });
+
+        model.position.set(0, 0, 5.98);
+        kerbyMesh = model;
+        scene.add(model);
+    });
+        // 7. กระดานดำ
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/intereact/bb3.glb', (gltf) => {
+            const model = gltf.scene;
+            setupMeshShadows(model);
+            model.position.set(0, 0, 5.8);
+            boardMesh = model;
+            scene.add(model);
+            const center = getMeshCenter(model);
+            boardLightTarget.position.copy(center);
+            boardSpotLight.position.set(center.x + 5, center.y + 2, center.z);
+        }); 
+        
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
         function getMeshCenter(mesh) {
-            const box = new THREE.Box3().setFromObject(mesh), center = new THREE.Vector3();
-            return box.getCenter(center);
+            const box = new THREE.Box3().setFromObject(mesh);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            return center;
         }
 
         function focusOn(targetCenter, camOffset) {
             targetLookAt.copy(targetCenter);
             targetCamPos.copy(targetCenter).add(camOffset);
-            if (targetCamPos.y < 0.5) targetCamPos.y = 0.5;
             isTransitioning = true;
         }
 
         function getCanvasCoordinates(uv) {
-            return { canvasX: (1 - uv.y) * 1024, canvasY: (1 - uv.x) * 512 };
+            const canvasX = (1 - uv.y) * 1024;
+            const canvasY = (1 - uv.x) * 512;
+            return { canvasX, canvasY };
         }
 
         window.addEventListener('click', (event) => {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
-
-            const hit = (mesh) => mesh && raycaster.intersectObject(mesh, true).length > 0;
-
-            if (hit(meshes.tableLamp)) return tableLampLight.intensity = tableLampLight.intensity === 0 ? 5 : 0;
-            if (hit(meshes.floorLamp)) return floorLampLight.intensity = floorLampLight.intensity === 0 ? 3 : 0;
-
-            if (hit(meshes.monitor)) {
-                boardSpotLight.intensity = 0; if (phoneAudio) phoneAudio.pause();
-                const intersects = raycaster.intersectObject(meshes.monitor, true);
-                if (intersects[0]?.uv) {
-                    const { canvasX, canvasY } = getCanvasCoordinates(intersects[0].uv);
-                    if (canvasX >= githubBtn.x && canvasX <= githubBtn.x + githubBtn.w && canvasY >= githubBtn.y && canvasY <= githubBtn.y + githubBtn.h) return window.open('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/', '_blank');
-                }
-                return focusOn(getMeshCenter(meshes.monitor), new THREE.Vector3(2, 0.5, 0));
+            if (tableLampMesh && raycaster.intersectObject(tableLampMesh, true).length > 0) {
+                tableLampLight.intensity = tableLampLight.intensity === 0 ? 5 : 0;
+                return;
             }
-
-            if (hit(meshes.phone)) {
+            if (floorLampMesh && raycaster.intersectObject(floorLampMesh, true).length > 0) {
+                floorLampLight.intensity = floorLampLight.intensity === 0 ? 3 : 0;
+                return;
+            }
+            if (monitorMesh && raycaster.intersectObject(monitorMesh, true).length > 0) {
                 boardSpotLight.intensity = 0;
-                focusOn(getMeshCenter(meshes.phone), new THREE.Vector3(0, 1, 0));
+                if (phoneAudio) phoneAudio.pause();
+                const intersects = raycaster.intersectObject(monitorMesh, true);
+                if (intersects.length > 0 && intersects[0].uv) {
+                    const uv = intersects[0].uv;
+                    const { canvasX, canvasY } = getCanvasCoordinates(uv);
+
+                    if (canvasX >= githubBtn.x && canvasX <= githubBtn.x + githubBtn.w && canvasY >= githubBtn.y && canvasY <= githubBtn.y + githubBtn.h) {
+                        window.open('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/', '_blank');
+                        return;
+                    }
+                }
+                const center = getMeshCenter(monitorMesh);
+                focusOn(center, new THREE.Vector3(2, 0.5, 0));
+                return;
+            }
+            if (phoneMesh && raycaster.intersectObject(phoneMesh, true).length > 0) {
+                boardSpotLight.intensity = 0;
+                const center = getMeshCenter(phoneMesh);
+                focusOn(center, new THREE.Vector3(0, 1, 0));
                 isMusicPlaying = !isMusicPlaying;
-                isMusicPlaying ? phoneAudio.play().catch(() => {}) : phoneAudio.pause();
+                if (isMusicPlaying) {
+                    phoneAudio.play().catch(e => console.log("Audio play error:", e));
+                } else {
+                    phoneAudio.pause();
+                }
+                return;
+            }
+            if (kerbyMesh && raycaster.intersectObject(kerbyMesh, true).length > 0) {
+                boardSpotLight.intensity = 0;
+                if (phoneAudio) phoneAudio.pause();
+                const center = getMeshCenter(kerbyMesh);
+                focusOn(center, new THREE.Vector3(2, 0.5, 2));
                 return;
             }
 
-            if (hit(meshes.kerby)) {
-                boardSpotLight.intensity = 0; if (phoneAudio) phoneAudio.pause();
-                return focusOn(getMeshCenter(meshes.kerby), new THREE.Vector3(2, 0.5, 2));
-            }
-
-            if (hit(meshes.board)) {
+            if (boardMesh && raycaster.intersectObject(boardMesh, true).length > 0) {
                 if (phoneAudio) phoneAudio.pause();
-                focusOn(getMeshCenter(meshes.board), new THREE.Vector3(2, 0, 0));
-                return boardSpotLight.intensity = 5;
+                const center = getMeshCenter(boardMesh);
+                focusOn(center, new THREE.Vector3(2, 0, 0));
+                boardSpotLight.intensity = 5;
+                return;
             }
-
-            resetCamera();
         });
 
         window.addEventListener('mousemove', (event) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;  
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
 
-            let isHovering = false;
-            if (meshes.monitor) {
-                const intersects = raycaster.intersectObject(meshes.monitor, true);
-                if (intersects[0]?.uv) {
-                    const { canvasX, canvasY } = getCanvasCoordinates(intersects[0].uv);
-                    isHovering = (canvasX >= igBtn.x && canvasX <= igBtn.x + igBtn.w && canvasY >= igBtn.y && canvasY <= igBtn.y + igBtn.h) ||
-                                 (canvasX >= githubBtn.x && canvasX <= githubBtn.x + githubBtn.w && canvasY >= githubBtn.y && canvasY <= githubBtn.y + githubBtn.h);
+            const interactables = [tableLampMesh, floorLampMesh, monitorMesh, phoneMesh, kerbyMesh, boardMesh].filter(Boolean);
+            let isHoveringObject = false;
+            for (let obj of interactables) {
+                if (raycaster.intersectObject(obj, true).length > 0) {
+                    isHoveringObject = true;
+                    break;
                 }
             }
-
-            if (!isHovering) {
-                isHovering = Object.values(meshes).some(obj => raycaster.intersectObject(obj, true).length > 0);
-            }
-            document.body.style.cursor = isHovering ? 'pointer' : 'default';
+            document.body.style.cursor = isHoveringObject ? 'pointer' : 'default';
         });
 
-        // Main Animation Loop
-        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             const elapsedTime = clock.getElapsedTime();
-
             
             curtainUniforms.uTime.value = elapsedTime;
+            celShaderUniforms.uTime.value = elapsedTime;
 
-            if (sceneMixer) sceneMixer.update(delta);
-            if (isMusicPlaying && phoneAudio.paused) phoneAudio.play().catch(() => {});
-
+            if (sceneMixer) {
+                sceneMixer.update(delta);
+            }
+            if (isMusicPlaying && phoneAudio.paused) {
+                phoneAudio.play().catch(() => {});
+            }
             if (isTransitioning) {
                 camera.position.lerp(targetCamPos, 0.05);
                 controls.target.lerp(targetLookAt, 0.05);
@@ -325,8 +516,6 @@
                     isTransitioning = false;
                 }
             }
-            if (camera.position.y < 0.5) camera.position.y = 0.5;
-
             controls.update();
             renderer.render(scene, camera);
         }
