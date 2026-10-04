@@ -181,7 +181,7 @@
 
         const loader = new THREE.GLTFLoader();
         // 1. ห้อง
-        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//scene/scene06.glb', (gltf) => {
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//scene/scene07.glb', (gltf) => {
             const model = gltf.scene;
             model.position.set(0, 0, 6);
             scene.add(model);
@@ -250,7 +250,7 @@
                     c.material = new THREE.MeshBasicMaterial({ map: screenTexture });
                 }
             });
-            model.position.set(0, 0, 5.98);
+            model.position.set(0, 0, 5.999);
             monitorMesh = model;
             scene.add(model);
         });
@@ -268,7 +268,7 @@
                     });
                 }
             });
-            model.position.set(0, 0, 5.98);
+            model.position.set(0, 0, 5.9999);
             phoneMesh = model;
             scene.add(model);
         });
@@ -297,12 +297,13 @@
         });
 
         // 6. เคอร์บี้ 
-        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/kerby.glb', (gltf) => {
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/kerby2.glb', (gltf) => {
             const model = gltf.scene;
             model.traverse(c => {
                 if (c.isMesh && c.material) {
                     c.castShadow = true;
                     c.receiveShadow = true;
+                    c.material.shadowSide = THREE.BackSide;
                     c.material.onBeforeCompile = (shader) => {
                         shader.uniforms.uLightDir = celShaderUniforms.uLightDir;
                         shader.fragmentShader = `
@@ -332,7 +333,7 @@
         scene.add(model);
     });
         // 7. กระดานดำ
-        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/intereact/bb04.glb', (gltf) => {
+        loader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics/intereact/bb05.glb', (gltf) => {
             const model = gltf.scene;
             model.position.set(0, 0, 5.8);
             boardMesh = model;
