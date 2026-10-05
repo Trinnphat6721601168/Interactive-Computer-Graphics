@@ -106,10 +106,8 @@
         const textureLoader = new THREE.TextureLoader();
         const screenTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/desktop.png');
 
-        const phoneAudio = new Audio('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/BlueArchiveOST.mp3');
-        phoneAudio.loop = true;
-        phoneAudio.volume = 0.1;
-        let isMusicPlaying = false;
+        
+        
 
         const phoneImageTexture = textureLoader.load('https://trinnphat6721601168.github.io/Interactive-Computer-Graphics//intereact/IMG_20260929_001020.jpg');
         phoneImageTexture.center.set(0.5, 0.5);
@@ -380,7 +378,7 @@
             }
             if (monitorMesh && raycaster.intersectObject(monitorMesh, true).length > 0) {
                 boardSpotLight.intensity = 0;
-                if (phoneAudio) phoneAudio.pause();
+               
                 const intersects = raycaster.intersectObject(monitorMesh, true);
                 if (intersects.length > 0 && intersects[0].uv) {
                     const uv = intersects[0].uv;
@@ -399,24 +397,19 @@
                 boardSpotLight.intensity = 0;
                 const center = getMeshCenter(phoneMesh);
                 focusOn(center, new THREE.Vector3(0, 1, 0));
-                isMusicPlaying = !isMusicPlaying;
-                if (isMusicPlaying) {
-                    phoneAudio.play().catch(e => console.log("Audio play error:", e));
-                } else {
-                    phoneAudio.pause();
-                }
-                return;
+               
+                
             }
             if (kerbyMesh && raycaster.intersectObject(kerbyMesh, true).length > 0) {
                 boardSpotLight.intensity = 0;
-                if (phoneAudio) phoneAudio.pause();
+                
                 const center = getMeshCenter(kerbyMesh);
                 focusOn(center, new THREE.Vector3(2, 0.5, 2));
                 return;
             }
 
             if (boardMesh && raycaster.intersectObject(boardMesh, true).length > 0) {
-                if (phoneAudio) phoneAudio.pause();
+               
                 const center = getMeshCenter(boardMesh);
                 focusOn(center, new THREE.Vector3(2, 0, 0));
                 boardSpotLight.intensity = 5;
@@ -451,9 +444,7 @@
             if (sceneMixer) {
                 sceneMixer.update(delta);
             }
-            if (isMusicPlaying && phoneAudio.paused) {
-                phoneAudio.play().catch(() => {});
-            }
+          
             if (isTransitioning) {
                 camera.position.lerp(targetCamPos, 0.05);
                 controls.target.lerp(targetLookAt, 0.05);
@@ -465,6 +456,7 @@
             }
             controls.update();
             renderer.render(scene, camera);
+        
         }
         animate();
 
